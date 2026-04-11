@@ -1,310 +1,412 @@
-# AGORA — Agent-based Governance and Outcome Response Analysis
+# ECHO — Entity-based Cyber History Observer
 
-> Simulate how economic policy cascades through society — from government decree to street-level life — in a living pixel-art city.
+> A noir pixel-art city where every building is a server, every road is a network connection, and a cyberattack left its echo behind. You are the investigator. A swarm of AI specialists are your field team. Together you reconstruct what happened before critical infrastructure collapses.
 
 ---
 
 ## Concept
 
-Input a real-world economic policy (500–1000 words). AGORA spins up 20 AI agents representing every layer of society — government, corporations, small businesses, media, unions, NGOs, and households — and simulates 9 months of cascading reactions across three phases. Watch it unfold in a top-down pixel city: chat bubbles, protests, price spikes, hiring freezes, strikes.
+Something happened last night. Money vanished. A building went dark. A citizen was terminated without authorization. The attack is over — but its **echo** remains: traces in logs, fragments of deleted files, anomalous traffic that rippled from machine to machine before anyone noticed.
+
+You have **10 in-game hours** to reconstruct that echo before evidence degrades.
+
+The city *is* the file system. Buildings are servers. Roads are network connections. Abandoned buildings are deleted data. Graffiti is malware. And scattered across the city are four AI specialist agents — **LOGIS, NETARA, CARVER, and CHRONO** — who move through the environment, investigate systems, and broadcast their findings. A central intelligence called **ECHO** aggregates their work into evolving hypotheses, guiding you while requiring your verification to act.
+
+The attack propagated like an echo through connected systems. Intelligence propagates the same way — from specialist to specialist, building toward a complete picture. When you have enough, you take it to the courtroom.
 
 **Target Prizes:**
-- K2 Think V2 (Best Use) — K2 is the core reasoning engine, not a side call
-- Societal Impact / ASUS — framing: tool for policymakers to stress-test decisions
-- Best UI/UX — the visual sim is the differentiator
+- Best Game Jam Track — fully playable mystery game
+- Best Digital Forensics (Cipher Tech) — teaches 4+ real forensics concepts
+- Best Gamification — turns forensics into a tactile game loop
+- Best UI/UX — noir pixel city with visible AI agents is unlike anything judges have seen
+- Best Moonshot — first forensics game with embodied multi-agent swarm
+- Best Use of Featherless.ai — entire agent swarm runs on open-source LLMs
+- Best Data Visualization (Peraton) — the city IS a live visualization of system activity
 
 ---
 
 ## Tech Stack
 
-| Layer     | Tech                                      |
-|-----------|-------------------------------------------|
-| Frontend  | Phaser 3, Next.js, Bun                    |
-| Backend   | FastAPI, LangGraph, Python                |
-| LLM       | K2 Think V2 (via API) — primary reasoning |
-| Assets    | Kenney RPG Urban Pack (CC0, 16×16 px)    |
-| Map Tool  | Tiled Map Editor → JSON → Phaser Tilemap  |
+| Layer     | Tech                                                                   |
+|-----------|------------------------------------------------------------------------|
+| Frontend  | Phaser 3, Next.js 16, Bun                                              |
+| Backend   | FastAPI, LangGraph, Python                                             |
+| LLM       | Featherless.ai (OpenAI-compatible, open-source models)                 |
+| Assets    | Kenney 1-Bit Pack (CC0, 16×16 px) — monochrome base + Phaser tinting  |
+| Map Tool  | Tiled Map Editor → JSON → Phaser Tilemap                               |
 
-**Tileset:** [Kenney RPG Urban Pack](https://kenney.nl/assets/rpg-urban-pack) — CC0, 480 tiles, 16×16, top-down city with buildings, roads, NPCs, vehicles. Direct download: `kenney_rpg-urban-pack.zip`
+**Tileset:** [Kenney 1-Bit Pack](https://kenney.nl/assets/1-bit-pack) — CC0, 1,060 tiles, 16×16, monochrome top-down city with buildings, roads, interiors, and characters.
 
----
+**Why 1-Bit for ECHO:**
+The monochrome base makes the city feel like a **digital ghost** — a memory of a system that once ran. Nothing looks alive until tinting breathes color into it. Color = meaning: the city literally shifts from black-and-white into color as agents investigate. The binary aesthetic mirrors the forensics theme — every tile is either signal or noise, known or unknown.
 
-## Agent Roster
+**Rendering approach — color as meaning:**
+All color applied at runtime via Phaser's `setTint()` per building/road based on forensics state:
 
-### Production (20 Agents)
-
-#### Government Layer (2)
-| ID | Name | Role |
-|----|------|------|
-| `gov_federal` | Federal Government | Enacts policy, controls fiscal levers |
-| `gov_central_bank` | Central Bank | Controls monetary policy, interest rates |
-
-#### Corporate Layer (7)
-| ID | Name | Sector |
-|----|------|--------|
-| `corp_manufacturing` | NorthAm Manufacturing | Auto / Industrial |
-| `corp_retail` | RetailGiant | Big-box retail |
-| `corp_tech` | TechCo | Software / Hardware |
-| `corp_energy` | EnergyCo | Utilities / Oil |
-| `sme_shop` | Corner Shop | Small retail |
-| `sme_restaurant` | Main St. Diner | Food service |
-| `sme_contractor` | Local Contractor | Trades / Services |
-
-#### Civil Society (3)
-| ID | Name | Role |
-|----|------|------|
-| `media_outlet` | The Daily Pulse | News — shapes perception |
-| `labor_union` | Workers United | Wage negotiation, strikes |
-| `ngo_advocacy` | Community First | Housing / poverty advocacy |
-
-#### Households (8)
-| ID | Name | Bracket |
-|----|------|---------|
-| `hh_hnw_1` | The Castellanos | High net worth — investor |
-| `hh_hnw_2` | The Hargroves | High net worth — executive |
-| `hh_mc_1` | The Nguyens | Middle class — professional |
-| `hh_mc_2` | The Petersons | Middle class — teacher |
-| `hh_mc_3` | The Okafor family | Middle class — skilled worker |
-| `hh_lm_1` | The Garcias | Lower-middle — service worker |
-| `hh_poor_1` | The Washingtons | Low income — part-time |
-| `hh_poor_2` | The Mirzas | Low income — gig / immigrant |
+| State | Tint | Effect |
+|---|---|---|
+| Unknown / unvisited | `0x334455` (cold blue-grey) | Fades into background |
+| Agent investigating | `0x7b61ff` (violet) | Pulses while agent is inside |
+| Clean / confirmed | `0xc8b89a` (warm amber) | Comes alive, readable |
+| Compromised | `0xff2200` (hard red) | Bleeds into adjacent tiles |
+| Evidence found | `0xffcc00` (gold) | Bursts then settles |
+| Offline / deleted | `0x111111` (near-black) | Almost invisible |
 
 ---
 
-### Testing (10 Agents — subset)
+## City ↔ Forensics Mapping
 
-`gov_federal`, `gov_central_bank`, `corp_manufacturing`, `corp_retail`, `sme_shop`, `media_outlet`, `labor_union`, `hh_hnw_1`, `hh_mc_1`, `hh_poor_1`
+| City Element        | Forensics Concept              | Visual State                                        |
+|---------------------|-------------------------------|-----------------------------------------------------|
+| Buildings           | Machines / servers             | Lit = active, dark = offline, red = compromised      |
+| Roads               | Network connections            | Circuit-trace pulse along edges                     |
+| Power grid          | System dependencies            | Blackout = dependency failure                       |
+| Citizens (NPCs)     | Running processes              | Walk normally; freeze/dissolve = killed             |
+| AI Agent NPCs       | Specialist investigators       | Move to buildings, animate while inspecting         |
+| Abandoned buildings | Deleted / corrupted files      | Boarded up, debris, recoverable furniture           |
+| Graffiti            | Malware signatures             | Hidden encoded messages on walls                    |
+| Security cameras    | System logs                    | Blinking = active log, smashed = wiped              |
+| City archives       | Registry artifacts             | Filing cabinets, ownership records                  |
+| Underground tunnels | Hidden / encrypted partitions  | Trapdoors, only visible when discovered             |
+| Blackouts           | Denial-of-service events       | Block-wide darkness, flickering                     |
+| Delivery trucks     | Suspicious network traffic     | Slow-moving glowing sprites between buildings       |
 
 ---
 
-## Agent Attributes
+## The Agent Swarm — MiroFish Architecture
 
-### Base (all agents)
-```python
-id:                str       # unique slug
-name:              str       # display name
-agent_type:        str       # "government" | "central_bank" | "large_corp" | ...
-sentiment:         float     # -1.0 (hostile/suffering) → 1.0 (thriving/content)
-trust_government:  float     # 0.0 → 1.0
-social_influence:  float     # 0.0 → 1.0  (weight on others' sentiment each cycle)
-relationships:     dict      # {agent_id: float}  -1 (rival) → 1 (ally)
-memory:            list[str] # ring buffer, last 10 events/messages received
+ECHO uses a **MiroFish-style multi-agent system**: a swarm of specialized AI agents that operate independently in parallel, share discoveries through a common evidence pool, and produce emergent collective intelligence without a central coordinator directing their work. A meta-agent (ECHO) observes the shared pool and synthesizes hypotheses for the player.
+
+Each specialist is an **embodied NPC** in the city — you watch them walk between buildings, see their investigation animations, and receive their findings as speech bubbles and evidence cards.
+
+### The Four Specialists
+
+| Agent | NPC Name | Specialty | What They Do |
+|---|---|---|---|
+| Log Analyst | **LOGIS** | Access logs, authentication events | Walks to buildings, reads visitor logs, flags anomalous logins, detects brute-force patterns |
+| Network Analyst | **NETARA** | Traffic patterns, lateral movement | Patrols road segments, reads delivery manifests, maps suspicious connections between nodes |
+| File Analyst | **CARVER** | Deleted data, steganography | Enters abandoned buildings, excavates debris, decodes graffiti, reconstructs fragmented files |
+| Timeline Analyst | **CHRONO** | Event sequencing, temporal correlation | Moves between buildings comparing timestamps, draws connection lines when sequences match |
+
+### ECHO — Central Intelligence (Meta-Agent)
+
+ECHO doesn't investigate directly. It observes what the four specialists discover, aggregates their findings into evolving hypotheses, and surfaces them to the player via the `ECHOPanel`. ECHO:
+- Synthesizes findings from all four specialists into a coherent attack narrative
+- Updates its confidence meter (0–100%) as evidence accumulates
+- Surfaces hypotheses: *"Based on LOGIS and NETARA's findings, the initial vector was likely the Bank Vault"*
+- Occasionally produces **red herrings** — ~20% of its flags are wrong, mirroring how real AI tools need human verification
+- Requires player confirmation before any finding is moved to the accusation board
+
+### MiroFish Pattern — How It Works
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Shared Evidence Pool                  │
+│   (append-only log of all specialist findings)          │
+└────────┬──────────┬──────────┬──────────┬──────────────┘
+         │          │          │          │
+      LOGIS      NETARA     CARVER     CHRONO
+    (parallel  (parallel  (parallel  (parallel
+     subgraph)  subgraph)  subgraph)  subgraph)
+         │          │          │          │
+         └──────────┴──────────┴──────────┘
+                         │
+                       ECHO
+                  (meta-agent, reads
+                   shared pool, synthesizes
+                   → hypothesis stream
+                   → player guidance)
 ```
 
-### Economic Base (most agents)
+**Key properties:**
+- All four specialists run **concurrently** (LangGraph parallel branches)
+- No specialist waits on another — they each query the scenario state independently
+- When LOGIS finds something relevant to NETARA's domain, it appends a `cross_ref` tag to the shared pool — NETARA picks it up on its next cycle without direct communication
+- ECHO runs on a slower cadence (every N findings) to synthesize, not to direct
+- Agents can **disagree** — conflicting findings are surfaced to the player as unresolved contradictions
+
+### Agent Attributes
+
 ```python
-wealth:           float  # current assets ($)
-monthly_income:   float
-monthly_expenses: float
+id:           str   # "logis" | "netara" | "carver" | "chrono" | "echo"
+specialty:    str
+confidence:   float  # 0.0–1.0 — how certain this agent is in its current findings
+findings:     list[Finding]   # evidence items discovered so far
+current_task: str             # what the agent is currently investigating
+position:     tuple[int,int]  # (x, y) grid position in city — drives NPC sprite
+cross_refs:   list[str]       # tags pointing to findings other agents should check
 ```
 
-### Federal Government
-```python
-approval_rating:         float  # 0.0 → 1.0
-tax_revenue_monthly:     float
-public_budget_monthly:   float
-deficit_monthly:         float
-policy_stance:           str    # "expansionary" | "neutral" | "contractionary"
-```
+### Featherless.ai Setup (Backend)
 
-### Central Bank
-```python
-interest_rate:        float  # % (e.g. 5.25)
-inflation_rate:       float  # current observed %
-inflation_target:     float  # target % (default 2.0)
-money_supply_growth:  float  # % YoY
-monetary_stance:      str    # "dovish" | "neutral" | "hawkish"
-```
+Each specialist and ECHO runs on the same Featherless.ai endpoint, using the same model but with different system prompts:
 
-### Large Corporation
 ```python
-revenue_monthly:        float
-profit_margin:          float  # %
-employees:              int
-sector:                 str
-supply_chain_exposure:  float  # 0-1, how much policy affects input costs
-price_pass_through:     float  # 0-1, ability to raise prices on consumers
-lobbying_budget:        float
-hiring_rate:            float  # % per month; negative = layoffs
-```
+from langchain_openai import ChatOpenAI
 
-### SME (Small/Medium Enterprise)
-```python
-revenue_monthly:   float
-profit_margin:     float
-employees:         int
-sector:            str
-debt_ratio:        float  # debt / assets
-resilience:        float  # 0-1; if < 0.2 → closure event triggers
-local_dependency:  float  # 0-1, tied to local consumer spending
-```
+def make_agent_llm() -> ChatOpenAI:
+    return ChatOpenAI(
+        model=os.getenv("ECHO_MODEL", "Qwen/Qwen3-235B-A22B"),
+        api_key=os.getenv("FEATHERLESS_API_KEY"),
+        base_url=os.getenv("FEATHERLESS_BASE_URL", "https://api.featherless.ai/v1"),
+    )
 
-### Media
-```python
-audience_reach:   float  # 0-1, fraction of agents reached per cycle
-political_bias:   float  # -1.0 (progressive) → 1.0 (conservative)
-credibility:      float  # 0-1; scales influence weight
-ad_revenue:       float
-```
-
-### Labor Union
-```python
-membership:           int
-negotiating_power:    float  # 0-1
-current_wage_demand:  float  # % increase demanded this cycle
-strike_probability:   float  # 0-1; if > 0.7 → strike event triggers
-```
-
-### NGO / Advocacy
-```python
-cause:              str    # "housing" | "poverty" | "environment"
-public_support:     float  # 0-1
-campaign_intensity: float  # 0-1
-funding:            float
-```
-
-### Household
-```python
-income_bracket:      str    # "high" | "middle" | "lower_middle" | "poor"
-annual_income:       float
-dependents:          int
-employment_status:   str    # "employed" | "unemployed" | "self_employed" | "retired"
-employer_id:         str    # agent_id of employing corporation (if employed)
-savings_rate:        float  # % of income saved monthly
-debt_ratio:          float  # total debt / annual income
-consumer_confidence: float  # 0-1
-price_sensitivity:   float  # 0-1; high = spending cuts sharply when prices rise
+# One instance per agent — same model, different prompts
+logis_llm   = make_agent_llm()
+netara_llm  = make_agent_llm()
+carver_llm  = make_agent_llm()
+chrono_llm  = make_agent_llm()
+echo_llm    = make_agent_llm()  # meta-agent, sees full shared evidence pool
 ```
 
 ---
 
-## Simulation: Three-Phase Cascade (9 Months)
+## Building Roster
 
-One full simulation = 9 simulated months across 3 phases.
-Each phase = 3 months = 3 LangGraph cycles (1 cycle per simulated month).
+Each scenario seeds 12–16 buildings. Types drawn from:
 
----
+### Server Types
+| ID | Building | Forensics Role |
+|----|----------|----------------|
+| `srv_web` | Web Agency | Public-facing server, high inbound traffic |
+| `srv_db` | Bank Vault | Database server, sensitive records |
+| `srv_auth` | City Hall | Authentication server, login events |
+| `srv_mail` | Post Office | Mail server, communication logs |
+| `srv_file` | Public Library | File server, document storage |
+| `srv_admin` | Police Station | Admin console, elevated privileges |
 
-### Phase 1 — Immediate Shock (Months 1–3)
+### Endpoint Types
+| ID | Building | Forensics Role |
+|----|----------|----------------|
+| `end_exec` | Mayor's Mansion | Executive workstation |
+| `end_dev` | Workshop | Developer machine, code artifacts |
+| `end_intern` | Boarding House | Intern/low-privilege endpoint |
+| `end_finance` | Counting House | Finance workstation, transaction logs |
 
-**What happens:**
-1. **Policy Ingestion** — K2 Think V2 parses the input policy text into structured parameters: affected sectors, cost impact %, timeline, enforcement mechanisms
-2. **Government Broadcast** — `gov_federal` sends policy announcement to all agents
-3. **Media Interpretation** — `media_outlet` filters through its `political_bias`, amplifies to its `audience_reach`; households and SMEs update `trust_government` and `sentiment`
-4. **Corporate Threat Assessment** — each large corp computes `cost_delta = supply_chain_exposure × policy_cost_impact`; signals price adjustment intent
-5. **Household Sentiment Shift** — households absorb news via media weight × credibility; `consumer_confidence` drops proportional to negative news
-6. **Central Bank Hold** — `gov_central_bank` observes but holds rates; monitors inflation signal
-
-**K2 role:** Interprets raw policy text → structured JSON parameters; generates each agent's first-person reaction message
-
-**Outputs:** Initial sentiment map, price-intent signals, consumer confidence delta
-
----
-
-### Phase 2 — Market Adjustment (Months 4–6)
-
-**What happens:**
-1. **Price Implementation** — corps execute price changes: `new_price_index += cost_delta × price_pass_through`
-2. **Employment Shifts** — corps adjust `hiring_rate` based on margin squeeze; households with `employer_id = corp_X` update `employment_status` if layoff threshold crossed
-3. **SME Squeeze** — SMEs face dual pressure: supplier cost increases + reduced consumer spending. `resilience -= stress_factor`; if `resilience < 0.2` → **closure event**
-4. **Wage Negotiation** — `labor_union` escalates `current_wage_demand` proportional to inflation and layoff rate; corps accept or reject; if rejected, `strike_probability` rises
-5. **Consumer Retrenchment** — households reduce spending based on `price_sensitivity × price_index_change`; lower income brackets feel more impact
-6. **Monetary Response** — `gov_central_bank` adjusts `interest_rate` based on observed inflation signal; stance shifts
-
-**K2 role:** Generates each agent's internal reasoning and outbound message per cycle; decides negotiation outcomes with multi-step reasoning
-
-**Outputs:** Price index, unemployment delta, SME closures count, interest rate shift
+### Infrastructure
+| ID | Building | Forensics Role |
+|----|----------|----------------|
+| `infra_router` | Crossroads Tavern | Network router, all traffic passes through |
+| `infra_dns` | Town Crier Tower | DNS server, name resolution logs |
+| `infra_vpn` | Underground Tunnel | VPN endpoint, encrypted egress |
+| `infra_backup` | Warehouse | Backup server, snapshot history |
 
 ---
 
-### Phase 3 — Societal Cascade (Months 7–9)
+## Building Attributes
 
-**What happens:**
-1. **Threshold Events** — accumulated stress triggers discrete events:
-   - `strike_probability > 0.70` → **Strike event**: corps lose revenue, union gains power
-   - `sme.resilience < 0.20` → **Business closure**: local unemployment spikes
-   - `household.sentiment < -0.60` (3+ households) → **Protest event**: visible in city
-   - `gov_federal.approval_rating < 0.30` → **Policy reversal signal**: government agent re-evaluates
-2. **NGO Activation** — `ngo_advocacy` ramps `campaign_intensity` proportional to poverty indicators; generates public pressure on government
-3. **Media Cascade** — media covers threshold events; `audience_reach` boosts for event cycles; feedback loop amplifies sentiment shifts
-4. **Government Response** — `gov_federal` K2 reasoning considers approval_rating + NGO pressure + media tone → may issue policy amendments, relief packages, or double down
-5. **Final Stabilization** — agents settle into new equilibrium
+```python
+id:               str    # unique slug
+building_type:    str    # "server" | "endpoint" | "infrastructure"
+name:             str    # display name
+status:           str    # "clean" | "compromised" | "offline" | "unknown"
+activity_log:     list[LogEntry]   # timestamped access/event records
+deleted_files:    list[FileEntry]  # recoverable via file carving mechanic
+registry:         dict             # ownership, install history, config keys
+graffiti:         str | None       # base64-encoded steganographic payload
+connections:      list[str]        # building IDs this node connects to
+traffic_anomaly:  float            # 0.0–1.0, NETARA-computed suspicion score
+agent_visited:    list[str]        # which specialist agents have inspected this building
+```
 
-**K2 role:** Most critical phase — multi-agent reasoning chains; government counterfactual analysis; protest/strike outcome modeling
+---
 
-**Output Metrics Dashboard:**
-| Metric | Description |
-|--------|-------------|
-| Price Index | Avg % price change across corps |
-| Unemployment Rate | % of household agents unemployed |
-| Social Unrest Index | Mean negative sentiment score |
-| Business Survival Rate | % of SMEs still operating |
-| Government Approval | `gov_federal.approval_rating` |
-| Interest Rate | `gov_central_bank.interest_rate` |
+## Gameplay Loop
+
+### 1 — The Incident Report
+Player receives a case briefing. The four specialist NPCs spawn at the city entrance and begin fanning out autonomously. ECHO speaks: *"Four agents deployed. I'll synthesize their findings. You have 10 hours."*
+
+### 2 — Watch the Swarm Work
+Specialist NPCs move through the city independently. Speech bubbles appear as they make discoveries:
+- LOGIS at Bank Vault: *"4,000 login attempts from a single IP. 03:17 AM."*
+- NETARA on east road: *"Unusual outbound volume to the Underground Tunnel. No matching return traffic."*
+- CARVER in abandoned alley: *"Graffiti decodes to: `DROP TABLE transactions;`"*
+- CHRONO: *"LOGIS's timestamp and NETARA's traffic spike are 4 minutes apart. Same direction."*
+
+Findings stream into the `EventFeed` and are pinned to the city map.
+
+### 3 — Investigate Yourself
+Click any building to open `BuildingInspectModal` and dig deeper than the agents went:
+
+| Tab | Mechanic | Forensics Concept |
+|-----|----------|--------------------|
+| **Visitor Log** | Scroll entries, flag suspicious ones | Log analysis |
+| **Recovered Files** | Drag debris to restore deleted files | File carving |
+| **City Archives** | Browse registry keys, spot unauthorized installs | Registry forensics |
+| **Walls** | Decode graffiti cipher | Steganography |
+
+### 4 — Follow the Roads
+Roads glow with traffic data. Intensity = volume, color = time of day. Click any road to see the delivery truck manifest (timestamps, data volume, source/destination). Confirmed anomalies get flagged on the map.
+
+### 5 — Reconstruct the Timeline
+`TimelineScrubber` spans 10 in-game hours (18:00–04:00). Scrub to watch buildings light up as activity happened. The moment the attack jumped from machine to machine is visible as a red wave. The agent NPCs replay their own positions at each hour — you see when CHRONO first detected the anomaly.
+
+### 6 — Verify ECHO's Hypotheses
+ECHO periodically surfaces a hypothesis card: *"Hypothesis: origin = Bank Vault, vector = credential stuffing, path = Bank → Router → Mail. Confidence: 67%."* Player can **Accept** (adds to accusation board), **Reject** (removes from consideration), or **Investigate Further** (sends the relevant specialist back in).
+
+### 7 — Make Your Case
+`EvidenceBoard` accumulates confirmed findings. When accusation threshold is met, `CourtroomModal` opens — pixel-art courtroom, judge reviews:
+- Origin building (patient zero)
+- Attack path (ordered building list)
+- Responsible party (suspect name)
+
+Score = accuracy of all three. Partial credit available.
+
+---
+
+## Forensics Mechanics (Detail)
+
+### File Carving
+Abandoned buildings have pixel debris sprites. Drag debris → resolves into recovered `FileEntry` (name, type, partial content, timestamp). CARVER may already be inside doing the same — player and agent can recover different fragments.
+
+### Steganography
+Graffiti on building walls → click → pixel grid mini-game. Select every Nth pixel to extract a binary string, decoded by CARVER into readable text.
+
+### Traffic Analysis
+Road segments → click → volume-over-time chart (Phaser `Graphics`, no external lib). NETARA's finding appears as an annotation on the same chart.
+
+### Log Timeline Correlation
+Pin two buildings' logs side-by-side in timeline view. Matching timestamps draw a connector line. CHRONO does this automatically for its highest-suspicion pairs — player can do it manually for any pair.
 
 ---
 
 ## LangGraph Architecture
 
 ```
-Policy Input
-     ↓
-[K2 Parser Node] → structured policy params
-     ↓
-[Orchestrator Node] — broadcasts to all agents
-     ↓
-┌────────────────────────────────────┐
-│  Agent Subgraphs (parallel)        │
-│  gov → bank → corps → sme →        │
-│  media → union → ngo → households  │
-└────────────────────────────────────┘
-     ↓
-[Aggregator Node] — collects messages, computes metrics
-     ↓
-[State Update Node] — updates all agent attributes
-     ↓
-[Event Check Node] — fires threshold events
-     ↓
-[Phase Gate] — next month or next phase
-     ↓
-[Dashboard Output] + [Frontend SSE Stream]
+Case Briefing Request
+        ↓
+[Scenario Generator Node]  — LLM authors mystery: buildings, logs, planted evidence,
+                             attack path, red herrings, correct answer key
+        ↓
+[City Seeder Node]         — populates building attributes, traffic, deleted files
+        ↓
+[WebSocket: init]          — sends full city state + agent spawn positions to frontend
+        ↓
+┌──────────────────────────────────────────────────┐
+│  MiroFish Swarm (parallel LangGraph branches)    │
+│                                                  │
+│  [LOGIS Node]   [NETARA Node]  [CARVER Node]     │
+│      ↓               ↓              ↓            │
+│  log analysis   traffic scan   file recovery     │
+│      └───────────────┴──────────────┘            │
+│               Shared Evidence Pool               │
+│                      ↓                           │
+│              [CHRONO Node]                       │
+│           temporal correlation                   │
+└──────────────────────┬───────────────────────────┘
+                       ↓
+              [ECHO Meta-Agent Node]
+          synthesizes → hypothesis stream
+                       ↓
+         WebSocket: echo:hypothesis → ECHOPanel
+                       ↓
+              [Investigation Loop]
+   ├─ /building/inspect   → [Log Retrieval Node]
+   ├─ /traffic/analyze    → [Traffic Node]
+   ├─ /echo/verify        → [ECHO re-evaluation Node]
+   └─ /accusation/submit  → [Scoring Node]
+                       ↓
+            [WebSocket: verdict]
 ```
 
 ---
 
-## Frontend: Pixel City
+## Visual Style
 
-**Engine:** Phaser 3
-**Tileset:** Kenney RPG Urban Pack (CC0) — roads, buildings, sidewalks, cars, NPCs
-**Map:** Built in Tiled, exported as JSON
+**Palette:**
+| Role | Color |
+|------|-------|
+| Background / base | `#0a0a0f` |
+| Unknown building | `0x334455` (cold blue-grey) |
+| Agent investigating | `0x7b61ff` (violet pulse) |
+| Clean / confirmed | `0xc8b89a` (warm amber) |
+| Compromised | `0xff2200` with bleed |
+| ECHO hypothesis | `0x00ffcc` (cyan) |
+| Evidence confirmed | `0xffcc00` (gold) |
 
-| Entity | Sprite | Behavior |
-|--------|--------|----------|
-| Households | Walking NPCs | Roam streets; protest when sentiment < -0.6 |
-| SMEs | Storefront buildings | Door closes / "CLOSED" sign on closure event |
-| Corps | Large office buildings | Hiring banner / layoff notice overlay |
-| Government | City hall building | Flag color shifts with approval rating |
-| Media | Billboard / broadcast tower | Flashes headlines |
-| Union | Town square | Workers gather during strike event |
-| Chat bubbles | Above any agent | Shows K2-generated reaction message |
+**Kenney 1-Bit Pack — Echo Rendering:**
+- Tileset is monochrome — white sprites on transparent background, 16×16 px
+- World starts near-invisible — unvisited buildings pulse at 3% opacity
+- First-inspect: 400ms snap from near-invisible to full tint ("echo sharpens into reality")
+- Rain: `ParticleEmitter`, white 1×2 px rects, 85° angle, alpha 0.3
+- Corruption bleed: `Graphics` mask expands 1 tile/sec outward from compromised buildings
+- Roads: circuit-trace style, tinted `0x00ffcc`, animated pulse redrawn each frame
 
-**Event animations:**
-- Protest: NPC sprites cluster at government building with placard sprites
-- Strike: Workers gather outside factory, picketing
-- Business closure: Storefront darkens, "CLOSED" overlay
-- Price spike: $ counter floats up from shop
+**Agent NPC Sprites (1-bit characters, tinted per agent):**
+| Agent | Tint | Walk Animation |
+|---|---|---|
+| LOGIS | `0x44aaff` (blue) | 4-frame walk cycle |
+| NETARA | `0x00ffcc` (cyan) | 4-frame walk cycle |
+| CARVER | `0xff9900` (amber) | 4-frame walk cycle |
+| CHRONO | `0xcc44ff` (purple) | 4-frame walk cycle |
+
+**Animations:**
+| Event | Animation |
+|-------|-----------|
+| Agent arrives at building | NPC sprite walks to entrance, building tint pulses violet |
+| Agent finds evidence | Gold particle burst from building, speech bubble appears |
+| Building compromised | Red pulse → bleed seeps onto adjacent roads |
+| Building cleared | White flash → returns to normal tint |
+| ECHO hypothesis | Cyan glow radiates from ECHOPanel across implicated buildings |
+| Agents cross-referencing | Dashed line drawn between two buildings the agents are correlating |
+| NPC terminated | Sprite freeze → dissolve into pixel dust |
 
 ---
 
-## Demo Script (90 seconds for judges)
+## Scenario Structure
 
-1. Paste: *"The government imposes a 25% tariff on all imported steel and aluminum, effective immediately, with no exemptions."*
-2. K2 parses → parameters appear on screen
-3. Phase 1 plays: chat bubbles from corps ("Our input costs just jumped 25%"), households ("Prices are going up again...")
-4. Phase 2: factory storefront flashes "LAYOFFS", Corner Shop sentiment goes red
-5. Phase 3: NPCs cluster in protest, Corner Shop shows "CLOSED"
-6. Dashboard shows: Price Index +18%, Unemployment +4.2%, Approval Rating -31%
-7. Show counterfactual: replay with a subsidy policy → compare outcome
+```python
+{
+  "title": str,                      # "The Midnight Withdrawal"
+  "briefing": str,                   # Mayor's incident report text
+  "duration_hours": int,             # 10
+  "buildings": list[Building],       # seeded city state
+  "traffic_records": list[Traffic],  # timestamped road activity
+  "answer_key": {
+    "origin_building": str,
+    "attack_path": list[str],
+    "suspect": str,
+    "technique": str                 # "phishing" | "sql_injection" | "insider" | ...
+  },
+  "red_herrings": list[str],         # building IDs with planted false evidence
+  "agent_assignments": {             # which specialist starts at which building
+    "logis": str,
+    "netara": str,
+    "carver": str,
+    "chrono": str
+  },
+  "echo_hypotheses": list[Hypothesis]  # pre-seeded hypotheses ECHO surfaces during play
+}
+```
+
+---
+
+## Backend Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/investigate` | POST | Create investigation session, return `session_id` |
+| `/investigate/{id}/ws` | WebSocket | Stream: `init` → agent finding events → `verdict` |
+| `/echo/query` | POST | Natural language question to ECHO meta-agent |
+| `/echo/verify` | POST | Player challenges an ECHO hypothesis — re-evaluates |
+| `/building/{id}/inspect` | GET | Logs, files, registry, graffiti for a building |
+| `/traffic/analyze` | GET | Traffic manifest + anomaly scores for a road |
+| `/accusation/submit` | POST | Score accusation against answer key |
+
+---
+
+## Demo Script (90 seconds)
+
+1. Load: *"The Midnight Withdrawal"* — city appears, dark and rainy
+2. Four agent NPCs fan out from the entrance across the city
+3. LOGIS reaches Bank Vault → speech bubble: *"4,000 logins. 03:17AM. One IP."*
+4. NETARA on east road → *"Heavy outbound to the VPN tunnel. Nothing came back."*
+5. CHRONO: dashed line appears between Bank and Router → *"4-minute gap. Same direction."*
+6. Scrub timeline to 03:17 → red wave jumps Bank → Router → Mail Server
+7. ECHO panel: *"Hypothesis: Bank Vault origin, credential stuffing, path via Router. 71% confidence."* Player clicks Accept
+8. Player clicks Underground Tunnel → City Archives → registered to `g.harlow`
+9. CARVER decodes graffiti on Mail Server: `DROP TABLE transactions;`
+10. Submit accusation → courtroom → 100% accuracy — city lights up clean, echo resolved
 
 ---
 
@@ -312,6 +414,10 @@ Policy Input
 
 | Prize | Argument |
 |-------|----------|
-| **K2 Think V2** | K2 is the entire reasoning backbone — every agent message, negotiation, event outcome, and policy parse runs through K2. Non-trivial multi-step simulation reasoning. |
-| **Societal Impact** | Gives policymakers, journalists, and educators a tool to visualize second-order effects of economic decisions before they're enacted. |
-| **Best UI/UX** | A living pixel city that reacts to policy in real time is not something judges have seen before. |
+| **Best Game Jam** | Fully playable noir mystery, win condition, scoring, two scenarios |
+| **Best Digital Forensics** | Log analysis, file carving, steganography, traffic analysis, registry forensics |
+| **Best Gamification** | Every forensics concept is a tactile mechanic; swarm agents make invisible work visible |
+| **Best UI/UX** | Noir pixel city with visible AI agents — literally watching intelligence propagate |
+| **Best Moonshot** | First forensics game with embodied MiroFish multi-agent swarm |
+| **Best Featherless.ai Use** | Five agents (LOGIS, NETARA, CARVER, CHRONO, ECHO) all powered by Featherless open-source LLMs |
+| **Best Data Visualization** | The city IS the data — attack propagation, agent movement, and evidence recovery are all spatial |
