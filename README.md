@@ -1,10 +1,11 @@
-# SIMULACRA
+# Echolocate
 
 ### *Learn not just from the past, but also from the future.*
 
 ![Simulation](https://i.imgur.com/jkbhQAB.png)
 
-[![YHack 2026](https://img.shields.io/badge/YHack-2026-blueviolet?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTV6TTIgMTdsOCA0IDQtMi00LTItOCA0em0xMC00bC04IDQgNC0yIDQgMnoiLz48L3N2Zz4=)](https://yhack.org)
+[![Bitcamp 2026](https://img.shields.io/badge/Bitcamp-2026-ff6b35?style=flat-square)](https://bit.camp/)
+[![Moonshot Award](https://img.shields.io/badge/Moonshot_Award-Most_Innovative_Hack-f4c542?style=flat-square)](https://bit.camp/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -14,6 +15,8 @@
 
 > **Economic policy simulation with 25 AI agents in a pixel-art city.**
 > Paste a policy. Watch your city react.
+
+> **Winner of Bitcamp UMD's Moonshot Award for Most Innovative Hack.**
 
 ---
 
@@ -37,7 +40,7 @@
 
 ```bash
 # 1. Clone
-git clone <repo-url> && cd yhack
+git clone https://github.com/akshajnad/bitcamp.git && cd bitcamp
 
 # 2. Backend
 cd backend
@@ -146,7 +149,7 @@ NPC social influence uses three mechanisms from the literature:
 ## 🗂 Project Structure
 
 ```
-yhack/
+bitcamp/
 ├── frontend/                   # Next.js 16 + Phaser 3
 │   ├── src/app/                # Pages and layouts
 │   ├── src/components/         # GameCanvas, PolicyInput, EventFeed, Dashboard,
@@ -213,4 +216,4 @@ yhack/
 
 ---
 
-*Built at YHack 2026.*
+*Built at Bitcamp 2026 at the University of Maryland. Winner of the Moonshot Award for Most Innovative Hack.*
